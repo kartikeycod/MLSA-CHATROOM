@@ -1,0 +1,240 @@
+/*
+  web/src/components/ChatRoom.css
+  Pure CSS Dark Futuristic Theme for ChatRoom.jsx
+*/
+
+/* --- 1. Base Variables (Consistent with App.css) --- */
+:root {
+    --color-primary: #4CAF50; /* Neon Green/Blue Accent */
+    --color-background: #a69b9b; /* Deep Black */
+    --color-sidebar: #080808; /* Sidebar/Card Background */
+    --color-main-chat-bg: #705c5c; /* Main Chat Window Background */
+    --color-text-light: #E0E0E0;
+    --color-border-dark: #333333;
+    --color-border-light: #444444;
+    --color-button-public: #214322; /* Dark background for Global button */
+    --color-button-group: #1A3E59; /* Dark background for Group button */
+}
+
+/* --- 2. Main Layout and Overrides --- */
+
+.chat-layout {
+    display: flex;
+    height: 100vh; /* h-screen */
+    color: var(--color-text-light);
+}
+
+/* Overriding the default Stream SDK theme properties */
+.str-chat {
+    background-color: var(--color-background) !important;
+    font-family: 'Space Mono', monospace;
+    color: var(--color-text-light);
+}
+.str-chat__theme-dark {
+    /* Use the dark theme base, but our CSS customizes it */
+    --str-chat--color-text: var(--color-text-light);
+    --str-chat--channel-list-bg: var(--color-sidebar);
+    --str-chat--primary-color: var(--color-primary);
+    --str-chat--border-color: var(--color-border-dark);
+}
+
+/* --- 3. Sidebar (Channel List Area) --- */
+
+.chat-sidebar {
+    width: 25%; /* w-1/4 */
+    border-right: 1px solid var(--color-border-dark);
+    padding: 0.75rem; /* p-3 */
+    background-color: var(--color-sidebar);
+    overflow-y: auto;
+}
+
+.sidebar-title {
+    font-weight: 600; /* font-semibold */
+    font-size: 1.125rem; /* text-lg */
+    margin-bottom: 0.75rem; /* mb-3 */
+    color: var(--color-primary);
+    letter-spacing: 1px;
+}
+
+/* --- 4. Main Chat Window --- */
+
+.chat-main-window {
+    flex-grow: 1; /* flex-1 */
+    background-color: var(--color-main-chat-bg);
+}
+
+/* --- 5. New Chat Controls --- */
+
+.new-chat-controls {
+    margin-top: 1.25rem; /* mt-5 */
+    border-top: 1px solid var(--color-border-dark); 
+    padding-top: 0.75rem; /* pt-3 */
+}
+
+.new-chat-title {
+    font-weight: 600; /* font-semibold */
+    margin-bottom: 0.5rem; /* mb-2 */
+    color: var(--color-text-light);
+}
+
+/* New Chat Input (DM) */
+.new-chat-input {
+    border: 1px solid var(--color-border-dark);
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.5rem; /* px-2 py-1 */
+    font-size: 0.875rem; /* text-sm */
+    width: 100%;
+    margin-bottom: 0.5rem; /* mb-2 */
+    background-color: #715656;
+    color: var(--color-text-light);
+    box-sizing: border-box;
+}
+.new-chat-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+
+/* New Chat Buttons (Global/Group) */
+.new-chat-button {
+    display: block;
+    width: 100%;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem; /* py-1 px-2 */
+    margin-bottom: 0.5rem; /* mb-2 */
+    border-radius: 0.25rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.button-public {
+    background-color: var(--color-button-public); /* Darker blue/green background */
+    color: #b3e6b3;
+    border: 1px solid #4CAF50;
+}
+.button-public:hover:not([disabled]) {
+    background-color: #388E3C;
+}
+
+.button-group-create {
+    background-color: var(--color-button-group); /* Darker green/blue background */
+    color: #b3cce6;
+    border: 1px solid #5DADE2;
+}
+.button-group-create:hover:not([disabled]) {
+    background-color: #3f79a9;
+}
+
+/* --- 6. Modal Styling (Group Creation) --- */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(139, 95, 95, 0.7); /* bg-black/50 */
+    z-index: 9999;
+}
+
+.modal-card {
+    background-color: var(--color-sidebar);
+    border-radius: 0.5rem; /* rounded-lg */
+    box-shadow: 0 0 25px rgba(76, 175, 80, 0.5); /* Futuristic glow on modal */
+    padding: 1.5rem; /* p-6 */
+    width: 24rem; /* w-96 */
+    border: 1px solid var(--color-primary);
+}
+
+.modal-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--color-text-light);
+    text-align: center;
+}
+
+.modal-form {
+    margin-top: 1rem;
+}
+
+.modal-input,
+.modal-textarea {
+    border: 1px solid var(--color-border-dark);
+    border-radius: 0.25rem;
+    padding: 0.5rem 0.75rem; /* px-3 py-2 */
+    width: 100%;
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem; /* text-sm */
+    background-color: #ce6868;
+    color: var(--color-text-light);
+    box-sizing: border-box;
+    resize: none;
+}
+.modal-textarea {
+    height: 5rem;
+}
+.modal-input:focus, .modal-textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+}
+
+.modal-button {
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.button-cancel {
+    background-color: #555;
+    color: white;
+}
+.button-cancel:hover {
+    background-color: #777;
+}
+
+.button-create-primary {
+    background-color: #1E88E5; /* Blue for Create */
+    color: white;
+}
+.button-create-primary:hover:not([disabled]) {
+    background-color: #1565C0;
+}
+.button-create-loading {
+    background-color: #81D4FA;
+    cursor: not-allowed;
+}
+
+/* --- Responsive Layout Adjustments --- */
+@media (max-width: 768px) {
+    .chat-layout {
+        flex-direction: column; /* Stack sidebar and chat window vertically */
+    }
+    .chat-sidebar {
+        width: 100%;
+        height: 40vh; /* Give sidebar a fixed height on mobile */
+        border-right: none;
+        border-bottom: 1px solid var(--color-border-dark);
+    }
+    .chat-main-window {
+        height: 60vh; /* Give main window the rest of the space */
+    }
+    .modal-card {
+        width: 90%; /* Make modal nearly full width */
+    }
+}
