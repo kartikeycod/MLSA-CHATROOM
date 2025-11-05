@@ -1,6 +1,6 @@
-// web/src/components/ChatRoom.jsx
+// web/src/components/ChatRoom.jsx — FINAL FIXED VERSION
 import React, { useState, useEffect } from "react";
-import "./ChatRoom.css"
+import "./ChatRoom.css";
 import {
   Chat,
   Channel,
@@ -22,37 +22,38 @@ export default function ChatRoom({ nickname, chatCredentials }) {
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [groupMembers, setGroupMembers] = useState("");
-  const [dmTargetUsername, setDmTargetUsername] = useState(''); 
+  const [dmTargetId, setDmTargetId] = useState("");
 
   // ✅ Initialize Stream client
   const client = useCreateChatClient({
     apiKey,
     tokenOrProvider: streamToken,
     userData: {
-      id: userId,
+      id: userId, // must match backend token
       name: nickname,
     },
   });
+  console.log("🟢 Frontend connecting as:", chatCredentials.userId);
 
-  // ✅ Auto-join Global Chat
+
+  // ✅ Auto-join Global Chat (guaranteed join)
   useEffect(() => {
     if (!client) return;
 
     const setup = async () => {
       try {
-        const globalChannel = client.channel("messaging", "global-public-chat", {
+        const global = client.channel("messaging", "global-public-chat", {
           name: "🌍 Global Public Chat",
           created_by_id: userId,
           members: [userId],
         });
-
-        await globalChannel.create();
-        await globalChannel.watch();
-
-        console.log("✅ Joined global-public-chat");
-        setActiveChannel(globalChannel);
+        await global.create();
+        await global.addMembers([userId]); // ensure membership
+        await global.watch();
+        setActiveChannel(global);
+        console.log("✅ Joined global-public-chat as:", userId);
       } catch (err) {
-        console.error("Error setting up chat:", err);
+        console.error("❌ Error setting up global chat:", err);
       }
     };
 
@@ -60,90 +61,98 @@ export default function ChatRoom({ nickname, chatCredentials }) {
 
     return () => {
       client.disconnectUser();
-      console.log("🔌 Stream client disconnected.");
     };
   }, [client, userId]);
 
-  // ✅ Channel list filter
+  // ✅ Channel List Filter
   const filters = { members: { $in: [userId] } };
   const sort = { last_message_at: -1 };
 
-  // ✅ Function to create or open channels
+  // ✅ Create or open channels safely
   const createOrOpenChannel = async (type, identifier, members = []) => {
     if (!client) return;
     setCreating(true);
 
     try {
-      let channelId, channelName, channelData;
+      let channelId, channelData;
 
       if (type === "public") {
         channelId = "global-public-chat";
-        channelName = "🌍 Global Public Chat";
-        channelData = { name: channelName, created_by_id: userId, members: [userId] };
-      } else if (type === "dm") {
-        const targetId = identifier.toLowerCase().trim();
-        const membersSorted = [userId, targetId].sort();
-        channelId = client.channel("messaging", { members: membersSorted }).id; 
-        channelName = `💬 ${membersSorted.filter(m => m !== userId).join("")}`; 
         channelData = {
-          name: channelName,
+          name: "🌍 Global Public Chat",
           created_by_id: userId,
-          members: membersSorted,
+          members: [userId],
+        };
+      }
+
+      if (type === "dm") {
+        const targetUid = identifier.trim();
+        if (!targetUid) throw new Error("Missing target user UID");
+
+        const sorted = [userId, targetUid].sort();
+        channelId = `dm-${sorted.join("-")}`;
+        channelData = {
+          name: `DM with ${targetUid}`,
+          created_by_id: userId,
+          members: sorted,
           is_direct_message: true,
         };
-      } else if (type === "group") {
-        const safeName = identifier.toLowerCase().replace(/[^a-z0-9_]/g, "_");
-        channelId = `group-${safeName}-${Date.now()}`;
-        channelName = `👥 ${identifier}`;
+      }
+
+      if (type === "group") {
+        const safe = identifier.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+        channelId = `group-${safe}-${Date.now()}`;
+        const memberUids = [...new Set([userId, ...members])];
         channelData = {
-          name: channelName,
+          name: identifier,
           created_by_id: userId,
-          members: [...new Set([userId, ...members])],
+          members: memberUids,
           is_group: true,
         };
       }
 
-      const newChannel = client.channel("messaging", channelId, channelData);
-      await newChannel.create();
-      await newChannel.watch();
+      const channel = client.channel("messaging", channelId, channelData);
+      await channel.create();
+      await channel.addMembers(channelData.members); // ensure everyone is added
+      await channel.watch();
 
       console.log(`✅ Created/Joined ${type} channel: ${channelId}`);
-      setActiveChannel(newChannel);
+      setActiveChannel(channel);
       setShowGroupModal(false);
       setGroupName("");
       setGroupMembers("");
-      setDmTargetUsername(""); 
+      setDmTargetId("");
     } catch (err) {
-      console.error(`❌ Error creating ${type} channel:`, err);
+      console.error(`❌ Channel error (${type}):`, err);
     } finally {
       setCreating(false);
     }
   };
 
-  // 🚀 Dedicated handler for 1-on-1 chat
-  const handleCreateDM = (e) => {
+  // ✅ Direct Message Handler
+  const handleCreateDM = async (e) => {
     e.preventDefault();
-    if (dmTargetUsername.trim() && dmTargetUsername.toLowerCase().trim() !== userId) {
-      createOrOpenChannel("dm", dmTargetUsername.trim());
-    } else if (dmTargetUsername.toLowerCase().trim() === userId) {
-      alert("You cannot start a chat with yourself.");
+    const id = dmTargetId.trim();
+    if (!id) return;
+    if (id === userId) {
+      alert("You cannot DM yourself.");
+      return;
     }
+    createOrOpenChannel("dm", id);
   };
 
-  // ✅ Handle group creation
+  // ✅ Group Handler
   const handleGroupCreate = (e) => {
     e.preventDefault();
     if (!groupName.trim()) return;
-
     const membersArray = groupMembers
       .split(",")
-      .map((m) => m.trim().toLowerCase())
+      .map((m) => m.trim())
       .filter((m) => m && m !== userId);
-
     createOrOpenChannel("group", groupName, membersArray);
   };
 
-  // ✅ Loading state
+  // ✅ Loading
   if (!client || !activeChannel) {
     return (
       <div className="chat-loading-screen">
@@ -160,7 +169,6 @@ export default function ChatRoom({ nickname, chatCredentials }) {
         <div className="chat-sidebar">
           <h2 className="sidebar-title">💬 Chats</h2>
 
-          {/* Channel List */}
           <ChannelList
             filters={filters}
             sort={sort}
@@ -168,27 +176,26 @@ export default function ChatRoom({ nickname, chatCredentials }) {
             onSelect={(ch) => setActiveChannel(ch)}
           />
 
-          {/* --- Start New Chat Controls --- */}
           <div className="new-chat-controls">
             <h3 className="new-chat-title">Start New Chat</h3>
 
-            {/* 🌍 Global Chat */}
+            {/* 🌍 Global */}
             <button
               disabled={creating}
-              className="new-chat-button button-public"
               onClick={() => createOrOpenChannel("public")}
+              className="new-chat-button button-public"
             >
               🌍 Global Chat
             </button>
 
-            {/* 💬 Direct Message (Improved UX) */}
+            {/* 💬 DM by UID */}
             <form onSubmit={handleCreateDM} className="dm-form">
               <input
                 type="text"
-                placeholder="Enter username for DM"
+                placeholder="Enter Firebase UID of user"
                 className="new-chat-input"
-                value={dmTargetUsername}
-                onChange={(e) => setDmTargetUsername(e.target.value)}
+                value={dmTargetId}
+                onChange={(e) => setDmTargetId(e.target.value)}
                 required
               />
               <button
@@ -200,7 +207,7 @@ export default function ChatRoom({ nickname, chatCredentials }) {
               </button>
             </form>
 
-            {/* 👥 Group Chat Creation */}
+            {/* 👥 Group */}
             <button
               disabled={creating}
               className="new-chat-button button-group-create"
@@ -211,10 +218,9 @@ export default function ChatRoom({ nickname, chatCredentials }) {
           </div>
         </div>
 
-        {/* Main Chat Window */}
+        {/* Main Chat */}
         <div className="chat-main-window">
-          {/* 🔑 FIX: Add key={activeChannel.id} to force channel update */}
-          <Channel channel={activeChannel} key={activeChannel.id}> 
+          <Channel channel={activeChannel} key={activeChannel.id}>
             <Window>
               <ChannelHeader />
               <MessageList />
@@ -224,22 +230,22 @@ export default function ChatRoom({ nickname, chatCredentials }) {
         </div>
       </div>
 
-      {/* Group Chat Modal (omitted for brevity, no change) */}
+      {/* Group Modal */}
       {showGroupModal && (
-         <div className="modal-overlay">
+        <div className="modal-overlay">
           <div className="modal-card">
             <h3 className="modal-title">👥 Create Group Chat</h3>
             <form onSubmit={handleGroupCreate} className="modal-form">
               <input
                 type="text"
-                placeholder="Enter group name"
+                placeholder="Group name"
                 className="modal-input"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
                 required
               />
               <textarea
-                placeholder="Add members (comma separated usernames)"
+                placeholder="Add Firebase UIDs (comma separated)"
                 className="modal-textarea"
                 value={groupMembers}
                 onChange={(e) => setGroupMembers(e.target.value)}
@@ -255,7 +261,11 @@ export default function ChatRoom({ nickname, chatCredentials }) {
                 <button
                   type="submit"
                   disabled={creating}
-                  className={`modal-button ${creating ? "button-create-loading" : "button-create-primary"}`}
+                  className={`modal-button ${
+                    creating
+                      ? "button-create-loading"
+                      : "button-create-primary"
+                  }`}
                 >
                   {creating ? "Creating..." : "Create"}
                 </button>
